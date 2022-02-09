@@ -3,7 +3,7 @@ from create_bot import dp
 
 #@dp.message_handler()
 async def echo_send(message : types.Message):
-	await message.answer(message.text)
+	await message.answer('нет такой команды')
 
 
 

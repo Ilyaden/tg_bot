@@ -1,10 +1,20 @@
 from aiogram.utils import executor 
 from create_bot import dp
 from data_base import sqlite_db
+from data_base import makeorder_db
+from aiogram import types
 
-async def on_startup(_):
-	print('Бот вышел в онлайн')
+async def on_startup(dp):
+	print('bot online')
+
 	sqlite_db.sql_start()
+	makeorder_db.sql_start()
+
+	await dp.bot.set_my_commands([
+        types.BotCommand("start", "запустить бота"),   
+        types.BotCommand("stock", "посмотреть наличие товара"), 
+        
+    ])
 
 from handlers import admin, client, other 
 
