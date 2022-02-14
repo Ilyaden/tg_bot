@@ -1,6 +1,8 @@
 from aiogram import types, Dispatcher
 from create_bot import dp, bot
 from keyboards import kb_client
+from keyboards import button_case_client
+from keyboards import button_case_client2
 from aiogram.types import ReplyKeyboardRemove
 from data_base import sqlite_db
 from data_base import makeorder_db
@@ -8,13 +10,15 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.types import InlineKeyboardButton,InlineKeyboardMarkup
 
-ID = None
+
 
 class FSMClient(StatesGroup):
 	name = State()
 	number_ = State()
-	id_ = State()
-
+	username = State()
+	answer1 = State()
+	answer2 = State()
+	
 
 
 #@dp.message_handler(commands=['start', 'help'])
@@ -29,7 +33,6 @@ async def product_command(message : types.Message):
 
 #добавление первого товара в корзину
 async def cm_buy(message : types.Message):
-	
 	read = await sqlite_db.sql_read2()
 	for ret in read:
 		await bot.send_message(message.from_user.id, f'--{ret[0]} {ret[1]}:\n   {ret[2]} шт [{ret[3]} р/шт]', reply_markup=InlineKeyboardMarkup().\
@@ -43,7 +46,6 @@ async def cancel_handler(message : types.Message, state:FSMContext):
 		return
 	await state.finish()
 	await message.reply('ok')
-
 
 
 async def add_name(callback_query: types.CallbackQuery, state:FSMContext):
@@ -65,34 +67,55 @@ async def add_number_(message : types.Message, state:FSMContext):
 
 			if (int(data['number_']) <= int(number1) and (int(data['number_'])>0)):
 				await FSMClient.next()
-				await message.answer('хотите добавить еще товар?')
+				await message.answer('товар выбран', reply_markup=button_case_client2)
 			
 
 		except ValueError:
 			await message.answer('введи число')
 
 	
-async def add_id(message : types.Message, state:FSMContext):
-	global ID 
-	ID = message.from_user.id
+async def add_username(message : types.Message, state:FSMContext):
 	async with state.proxy() as data:
-		data['id_'] = ID
-	
+		data['username'] = message.from_user.username
+	await makeorder_db.sql_add_command(state)
+	await message.answer('хотите добавить еще товар?', reply_markup=button_case_client)
+	await FSMClient.next()
 
-	if (message.text == 'да'):
-		await makeorder_db.sql_add_command(state)
+
+async def give_answer1(message : types.Message, state:FSMContext):
+	async with state.proxy() as data:
+		data['answer1'] = message.text
+
+	if (data['answer1'] == 'да'):
+		await message.answer('выбери товар', reply_markup=kb_client)
 		await state.finish()
 		await cm_buy(message)
+
+	if (data['answer1'] == 'нет'):
+		await message.answer('подтвердить заказ',reply_markup=button_case_client)
+		await FSMClient.next()
+
+
+async def give_answer2(message : types.Message, state:FSMContext):
+	CHANNEL_ID = '-1001626199004'
+	async with state.proxy() as data:
+		data['answer2'] = message.text
+	await state.finish()
+
+	if (data['answer2'] == 'да'):
+		await message.answer('заказ создан',reply_markup=kb_client)	
+		username = ('@'+message.from_user.username)
+		name = await makeorder_db.sql_read_name(message.from_user.username)
+		number = await makeorder_db.sql_read_number_(message.from_user.username)
+		a =[username, name+":", number]
+		await bot.send_message(CHANNEL_ID, '\n '.join(a))
+		await makeorder_db.sql_delete(data['username'])
 		
+
+	if (data['answer2'] == 'нет'):
+		await message.answer('заказ отменен')
+		await makeorder_db.sql_delete(data['username'])
 		
-	if (message.text == 'нет'):
-		await makeorder_db.sql_add_command(state)
-		await message.reply('заказ создан')
-		await state.finish()
-
-
-
-
 
 
 
@@ -103,11 +126,16 @@ def register_handlers_client(dp : Dispatcher):
 	dp.register_message_handler(command_start, commands=['start', 'help'])
 	dp.register_message_handler(product_command, text='в наличии')
 	dp.register_message_handler(product_command, commands=['stock'])
+	dp.register_message_handler(cm_buy, commands=['buy'])
 
 	dp.register_message_handler(cm_buy, text='купить')
 	dp.register_callback_query_handler(add_name,  lambda x: x.data and x.data.startswith('add '), state=FSMClient.name)
 	dp.register_message_handler(add_number_, state=FSMClient.number_)
-	dp.register_message_handler(add_id, state=FSMClient.id_)
+	dp.register_message_handler(add_username, state=FSMClient.username)
+	dp.register_message_handler(give_answer1, state=FSMClient.answer1)
+	dp.register_message_handler(give_answer2, state=FSMClient.answer2)
+
+	
 	
 	
 		

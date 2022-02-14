@@ -8,7 +8,7 @@ def sql_start():
 	cur = base.cursor()
 	if base:
 		print("data base 'shop.db' connected")
-	base.execute('CREATE TABLE IF NOT EXISTS menu(name TEXT PRIMARY KEY, description TEXT , number_ TEXT, price TEXT)')
+	base.execute('CREATE TABLE IF NOT EXISTS menu(name TEXT , description TEXT , number_ TEXT, price TEXT)')
 	base.commit()
 
 async def sql_add_command(state):

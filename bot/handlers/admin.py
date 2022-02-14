@@ -70,7 +70,6 @@ async def load_name(message : types.Message, state:FSMContext):
 		await message.reply('Введи описание')
 		
 
-
 #ловим второй ответ
 #@dp.message_handler(state=FSMAdmin.name)
 async def load_description(message : types.Message, state:FSMContext):
@@ -114,7 +113,7 @@ async def change_item(callback_query: types.CallbackQuery,state:FSMContext):
 	async with state.proxy() as data:
 		data['message_text1'] = item
 	await FSMAdmin2.next()
-	await callback_query.answer(text='введи количество')
+	await callback_query.answer(text='введи количество', show_alert=True)
 	
 
 async def change_item2(message : types.Message, state:FSMContext):
@@ -124,6 +123,7 @@ async def change_item2(message : types.Message, state:FSMContext):
 		await sqlite_db.sql_change(state)
 		await state.finish()
 		await message.reply('Успешно')
+
 
 #удалить 
 #@dp.callback_query_handler(lambda x: x.data and x.data.startswith('del '))
@@ -139,8 +139,6 @@ async def delete_item1(message: types.Message):
 			await bot.send_message(message.from_user.id,  f'--{ret[0]} {ret[1]}:\n   {ret[2]} шт [{ret[3]} р/шт]', reply_markup=InlineKeyboardMarkup().\
 				add(InlineKeyboardButton(f'удалить {ret[0]}', callback_data=f'del {ret[0]}')))
 		
-
-
 
 def register_handlers_admin(dp : Dispatcher):
 	dp.register_message_handler(cm_start, text='загрузить', state=None)
